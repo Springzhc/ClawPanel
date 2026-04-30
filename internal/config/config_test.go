@@ -144,6 +144,49 @@ func TestWriteOpenClawJSONNormalizesLegacyAgentModelFields(t *testing.T) {
 	}
 }
 
+func TestWriteOpenClawJSONDropsUnsupportedRootModelAndSessionDir(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	cfg := &Config{OpenClawDir: dir}
+
+	input := map[string]interface{}{
+		"model":      map[string]interface{}{"primary": "openai/gpt-4o"},
+		"sessionDir": "/tmp/legacy-sessions",
+		"agents": map[string]interface{}{
+			"defaults": map[string]interface{}{
+				"model": map[string]interface{}{
+					"primary": "openai/gpt-4o",
+				},
+			},
+		},
+		"models": map[string]interface{}{
+			"providers": map[string]interface{}{},
+		},
+	}
+
+	if err := cfg.WriteOpenClawJSON(input); err != nil {
+		t.Fatalf("WriteOpenClawJSON failed: %v", err)
+	}
+
+	saved, err := cfg.ReadOpenClawJSON()
+	if err != nil {
+		t.Fatalf("ReadOpenClawJSON failed: %v", err)
+	}
+	if _, ok := saved["model"]; ok {
+		t.Fatalf("root model should be removed before writing")
+	}
+	if _, ok := saved["sessionDir"]; ok {
+		t.Fatalf("root sessionDir should be removed before writing")
+	}
+	agents, _ := saved["agents"].(map[string]interface{})
+	defaults, _ := agents["defaults"].(map[string]interface{})
+	model, _ := defaults["model"].(map[string]interface{})
+	if got, _ := model["primary"].(string); got != "openai/gpt-4o" {
+		t.Fatalf("agents.defaults.model.primary should remain, got %q", got)
+	}
+}
+
 func TestNormalizeOpenClawConfigDropsUnsupportedPerAgentContextOverrides(t *testing.T) {
 	t.Parallel()
 

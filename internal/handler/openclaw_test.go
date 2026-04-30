@@ -118,12 +118,14 @@ func TestSaveOpenClawConfigMirrorsPrimaryModelToLegacyField(t *testing.T) {
 		t.Fatalf("read saved config: %v", err)
 	}
 
-	model, ok := saved["model"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected legacy model field to be written")
+	if _, ok := saved["model"]; ok {
+		t.Fatalf("legacy root model field should not be written")
 	}
+	agents, _ := saved["agents"].(map[string]interface{})
+	defaults, _ := agents["defaults"].(map[string]interface{})
+	model, _ := defaults["model"].(map[string]interface{})
 	if got, _ := model["primary"].(string); got != "deepseek/deepseek-chat" {
-		t.Fatalf("unexpected legacy primary model: %q", got)
+		t.Fatalf("unexpected primary model: %q", got)
 	}
 }
 

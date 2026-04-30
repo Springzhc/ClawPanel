@@ -24,6 +24,8 @@ import (
 //     agents.list[].tools 下，但当前 OpenClaw 仅支持全局 tools 配置，需要清理。
 //  7. 历史版本曾把 bindings 写进 agents.bindings，但当前 OpenClaw 仅接受顶层 bindings，
 //     需要迁移/清理旧字段。
+//  8. 旧版面板曾写入根级 model/sessionDir，但新版 OpenClaw schema 不再接受，
+//     需要清理，避免 gateway/doctor 启动失败。
 func NormalizeOpenClawConfig(cfg map[string]interface{}) bool {
 	return normalizeOpenClawConfig(cfg, "")
 }
@@ -39,6 +41,15 @@ func normalizeOpenClawConfig(cfg map[string]interface{}, openClawDir string) boo
 		return false
 	}
 	changed := false
+
+	if _, ok := cfg["model"]; ok {
+		delete(cfg, "model")
+		changed = true
+	}
+	if _, ok := cfg["sessionDir"]; ok {
+		delete(cfg, "sessionDir")
+		changed = true
+	}
 
 	agents, ok := cfg["agents"].(map[string]interface{})
 	if ok && agents != nil {

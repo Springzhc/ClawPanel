@@ -506,9 +506,7 @@ func normalizeOpenClawCompatConfig(ocConfig map[string]interface{}) {
 		currentModel = deepCloneMap(legacyModel)
 		defaults["model"] = currentModel
 	}
-	if currentModel != nil {
-		ocConfig["model"] = deepCloneMap(currentModel)
-	}
+	delete(ocConfig, "model")
 }
 
 // GetOpenClawConfig 获取 OpenClaw 配置

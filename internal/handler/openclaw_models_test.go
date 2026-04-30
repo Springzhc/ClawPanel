@@ -75,3 +75,62 @@ func TestSaveModelsStripsTransientProviderFields(t *testing.T) {
 		t.Fatalf("expected provider fields to remain intact, got baseUrl=%q", got)
 	}
 }
+
+func TestSaveModelsDoesNotWriteUnsupportedRootModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tmpDir := t.TempDir()
+	cfg := &config.Config{OpenClawDir: tmpDir}
+	if err := cfg.WriteOpenClawJSON(map[string]interface{}{
+		"model": map[string]interface{}{"primary": "legacy/provider"},
+		"agents": map[string]interface{}{
+			"defaults": map[string]interface{}{
+				"model": map[string]interface{}{"primary": "openai/gpt-4o"},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("seed openclaw.json: %v", err)
+	}
+
+	body := map[string]interface{}{
+		"providers": map[string]interface{}{
+			"openai": map[string]interface{}{
+				"baseUrl": "https://api.openai.com/v1",
+				"apiKey":  "sk-test",
+				"api":     "openai-completions",
+				"models": []interface{}{
+					map[string]interface{}{"id": "gpt-4o", "name": "gpt-4o"},
+				},
+			},
+		},
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(rec)
+	ctx.Request = httptest.NewRequest(http.MethodPut, "/api/openclaw/models", bytes.NewReader(data))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+
+	SaveModels(cfg)(ctx)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	saved, err := cfg.ReadOpenClawJSON()
+	if err != nil {
+		t.Fatalf("read saved openclaw.json: %v", err)
+	}
+	if _, exists := saved["model"]; exists {
+		t.Fatalf("root model should not be written to openclaw.json")
+	}
+	agents, _ := saved["agents"].(map[string]interface{})
+	defaults, _ := agents["defaults"].(map[string]interface{})
+	model, _ := defaults["model"].(map[string]interface{})
+	if got, _ := model["primary"].(string); got != "openai/gpt-4o" {
+		t.Fatalf("agents.defaults.model.primary should remain, got %q", got)
+	}
+}

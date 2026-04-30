@@ -1,6 +1,7 @@
 package process
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -281,6 +282,66 @@ func TestGatewayPortIntWithNilConfigFallsBackToDefaultPort(t *testing.T) {
 	mgr := NewManager(nil)
 	if got := mgr.GatewayPortInt(); got != 18789 {
 		t.Fatalf("expected GatewayPortInt to return default 18789 when manager config is nil, got %d", got)
+	}
+}
+
+func TestEnsureOpenClawConfigPreservesDreamingConfig(t *testing.T) {
+	t.Parallel()
+
+	openclawDir := newOpenClawDir(t)
+	cfgPath := filepath.Join(openclawDir, "openclaw.json")
+	raw := map[string]interface{}{
+		"gateway": map[string]interface{}{
+			"mode": "local",
+			"port": float64(18789),
+		},
+		"plugins": map[string]interface{}{
+			"entries": map[string]interface{}{
+				"memory-core": map[string]interface{}{
+					"enabled": true,
+					"config": map[string]interface{}{
+						"dreaming": map[string]interface{}{
+							"enabled":   true,
+							"timezone":  "Asia/Shanghai",
+							"frequency": "0 */6 * * *",
+						},
+					},
+				},
+			},
+		},
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(cfgPath, data, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	mgr := NewManager(&config.Config{OpenClawDir: openclawDir, Port: 19527})
+	mgr.ensureOpenClawConfig()
+
+	afterRaw, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	var after map[string]interface{}
+	if err := json.Unmarshal(afterRaw, &after); err != nil {
+		t.Fatalf("decode config: %v", err)
+	}
+	plugins, _ := after["plugins"].(map[string]interface{})
+	entries, _ := plugins["entries"].(map[string]interface{})
+	memoryCore, _ := entries["memory-core"].(map[string]interface{})
+	memoryConfig, _ := memoryCore["config"].(map[string]interface{})
+	dreaming, _ := memoryConfig["dreaming"].(map[string]interface{})
+	if dreaming == nil {
+		t.Fatalf("dreaming config should be preserved, got %#v", after)
+	}
+	if enabled, _ := dreaming["enabled"].(bool); !enabled {
+		t.Fatalf("dreaming.enabled should remain true, got %#v", dreaming["enabled"])
+	}
+	if got, _ := dreaming["frequency"].(string); got != "0 */6 * * *" {
+		t.Fatalf("dreaming.frequency should be preserved, got %q", got)
 	}
 }
 
