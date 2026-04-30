@@ -17,7 +17,7 @@ REPO="zhaoxinyi02/ClawPanel"
 TAG_PREFIX="pro-v"
 GITHUB_RELEASES_API="https://api.github.com/repos/${REPO}/releases?per_page=20"
 PORT="19527"
-DEFAULT_VERSION="5.5.0"
+DEFAULT_VERSION="5.5.1"
 
 # ==================== 自动获取最新版本 ====================
 get_latest_version() {

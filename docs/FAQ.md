@@ -170,7 +170,7 @@ curl -I https://api.github.com/repos/zhaoxinyi02/ClawPanel/releases
 
 ```bash
 # 1. 下载新版本（替换版本号和平台）
-wget "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.0/clawpanel-v5.5.0-linux-amd64" -O /tmp/clawpanel
+wget "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.1/clawpanel-v5.5.1-linux-amd64" -O /tmp/clawpanel
 
 # 2. 替换程序
 sudo cp /tmp/clawpanel /opt/clawpanel/clawpanel

@@ -9,7 +9,7 @@
 Go Single Binary · React 18 · TailwindCSS · SQLite · WebSocket Real-time · Cross-platform
 
 [![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-red?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-5.5.0-violet?style=flat-square)](https://github.com/zhaoxinyi02/ClawPanel/releases)
+[![Release](https://img.shields.io/badge/Release-5.5.1-violet?style=flat-square)](https://github.com/zhaoxinyi02/ClawPanel/releases)
 [![Go](https://img.shields.io/badge/go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![React](https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev)
 [![CI](https://github.com/zhaoxinyi02/ClawPanel/actions/workflows/ci.yml/badge.svg)](https://github.com/zhaoxinyi02/ClawPanel/actions/workflows/ci.yml)
@@ -28,7 +28,7 @@ Go Single Binary · React 18 · TailwindCSS · SQLite · WebSocket Real-time · 
 > This project is for **learning and research purposes only**. **Commercial use is strictly prohibited.** Using third-party clients to log in to QQ/WeChat may violate Tencent's Terms of Service and **carries a risk of account suspension**. Please use test accounts. The author has **not performed any reverse engineering** and only integrates existing open-source projects. **No responsibility is assumed for any consequences.** By downloading and using this project, you agree to the [full disclaimer](DISCLAIMER.md).
 
 > [!NOTE]
-> **v5.5.0 Update** — this release improves Hermes platform management and panel settings UX, and fixes panel-chat / OpenClaw runtime compatibility issues. See [changelogs/v5.5.0.md](changelogs/v5.5.0.md)
+> **v5.5.1 Update** — this release fixes compatibility with newer OpenClaw config schemas, protects dreaming settings, and completes the GitHub-only install/update path after retiring the Lite release line. See [changelogs/v5.5.1.md](changelogs/v5.5.1.md)
 
 > [!IMPORTANT]
 > **The Lite edition has been discontinued.** ClawPanel now ships only the standard edition. It no longer bundles OpenClaw runtime and no longer provides Lite build, install, update, or packaging scripts. Historical Lite releases and changelogs remain available for reference.
@@ -235,7 +235,7 @@ The repository now includes two workflows for testing and release packaging:
     - `frontend-dist`
     - `clawpanel-linux-amd64-ci` for quick validation
 - `Release Build` (`.github/workflows/release.yml`)
-  - Trigger: `push` tag `pro-v*` (for example `pro-v5.5.0`) / manual dispatch
+  - Trigger: `push` tag `pro-v*` (for example `pro-v5.5.1`) / manual dispatch
   - Runs: automatic multi-platform binaries (`linux/darwin/windows`) + Windows installer `ClawPanel-Setup-v{version}.exe`
   - Publish: for tag runs, assets are uploaded to GitHub Releases with `checksums.txt`
 
@@ -244,8 +244,8 @@ Additionally, `Dependabot` (`.github/dependabot.yml`) checks GitHub Actions depe
 Example:
 
 ```bash
-git tag pro-v5.5.0
-git push origin pro-v5.5.0
+git tag pro-v5.5.1
+git push origin pro-v5.5.1
 ```
 
 ## Environment Variables

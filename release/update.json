@@ -1,13 +1,13 @@
 {
-  "latest_version": "5.5.0",
-  "release_time": "2026-04-20T22:30:00+08:00",
-  "release_note": "## ClawPanel v5.5.0\n\n- Hermes 平台管理页对齐 OpenClaw 通道式配置体验，补齐平台表单、侧边栏与概览交互\n- 安装与更新链路统一收敛到 GitHub Releases\n- 修复 panel-chat 与 OpenClaw 新版 schema/runtime 兼容问题，并增强群聊增量回显与执行顺序",
+  "latest_version": "5.5.1",
+  "release_time": "2026-04-30T23:50:00+08:00",
+  "release_note": "## ClawPanel v5.5.1\n\n- 修复新版 OpenClaw 拒绝根级 model / sessionDir 时导致启动或 doctor 失败的问题\n- 保护 memory-core dreaming 配置，避免面板启动前的自动修复影响梦境模式\n- 完成 Lite 发行线退场后的 GitHub-only 安装、更新与发布元数据链路",
   "download_urls": {
-    "linux_amd64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.0/clawpanel-v5.5.0-linux-amd64",
-    "linux_arm64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.0/clawpanel-v5.5.0-linux-arm64",
-    "darwin_amd64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.0/clawpanel-v5.5.0-darwin-amd64",
-    "darwin_arm64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.0/clawpanel-v5.5.0-darwin-arm64",
-    "windows_amd64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.0/clawpanel-v5.5.0-windows-amd64.exe"
+    "linux_amd64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.1/clawpanel-v5.5.1-linux-amd64",
+    "linux_arm64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.1/clawpanel-v5.5.1-linux-arm64",
+    "darwin_amd64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.1/clawpanel-v5.5.1-darwin-amd64",
+    "darwin_arm64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.1/clawpanel-v5.5.1-darwin-arm64",
+    "windows_amd64": "https://github.com/zhaoxinyi02/ClawPanel/releases/download/pro-v5.5.1/clawpanel-v5.5.1-windows-amd64.exe"
   },
   "major_change": false,
   "change_warning": ""
