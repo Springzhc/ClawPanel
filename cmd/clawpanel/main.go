@@ -179,7 +179,7 @@ func runServer(stopCh chan struct{}) {
 	}
 
 	// 启动独立更新服务（进程隔离，独立端口）
-	updaterSrv := updater.NewServer(buildinfo.Version, cfg.DataDir, cfg.OpenClawDir, cfg.Port, buildinfo.NormalizedEdition())
+	updaterSrv := updater.NewServer(buildinfo.Version, cfg.DataDir, cfg.OpenClawDir, cfg.Port, buildinfo.NormalizedEdition(), cfg.GetUpdateProxy())
 	updaterSrv.Start()
 
 	// 设置 Gin 模式
@@ -454,6 +454,8 @@ func runServer(stopCh chan struct{}) {
 			auth.PUT("/workspace/path", handler.SetWorkspacePath(cfg))
 			auth.GET("/openclaw/dir", handler.GetOpenClawDir(cfg))
 			auth.PUT("/openclaw/dir", handler.SetOpenClawDir(cfg))
+			auth.GET("/panel/update-proxy", handler.GetUpdateProxy(cfg))
+			auth.PUT("/panel/update-proxy", handler.SetUpdateProxy(cfg))
 			auth.POST("/workspace/upload", handler.WorkspaceUpload(cfg))
 			auth.POST("/workspace/mkdir", handler.WorkspaceMkdir(cfg))
 			auth.POST("/workspace/delete", handler.WorkspaceDelete(cfg))

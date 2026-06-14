@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import {
   Wifi, Users, Cpu, Clock, RefreshCw,
   ChevronDown, ChevronRight, ArrowDown, Activity,
-  MemoryStick, Radio, TrendingUp, AlertTriangle, Download, Brain, Loader2,
+  MemoryStick, Radio, TrendingUp, AlertTriangle, Download, Brain, Loader2, Bot,
 } from 'lucide-react';
 import type { LogEntry } from '../hooks/useWebSocket';
 import { useI18n } from '../i18n';

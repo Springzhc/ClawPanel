@@ -327,7 +327,7 @@ function normalizeSessionVisibility(raw: any): SessionVisibility {
 }
 
 export default function SystemConfig() {
-  const { t: i18n } = useI18n();
+  const { t: i18n, locale } = useI18n();
   const { uiMode } = (useOutletContext() as { uiMode?: 'modern' }) || {};
   const [searchParams] = useSearchParams();
   const modern = uiMode === 'modern';
@@ -373,6 +373,10 @@ export default function SystemConfig() {
   const [openClawDir, setOpenClawDir] = useState('');
   const [openClawDirLoading, setOpenClawDirLoading] = useState(false);
   const [openClawDirSaving, setOpenClawDirSaving] = useState(false);
+  const [updateProxy, setUpdateProxy] = useState('');
+  const [updateProxySaving, setUpdateProxySaving] = useState(false);
+  const [updateProxyLoading, setUpdateProxyLoading] = useState(false);
+  const [customProxy, setCustomProxy] = useState('');
   const [providerIdDrafts, setProviderIdDrafts] = useState<Record<string, string>>({});
 
   const providers = config?.models?.providers || {};
@@ -461,6 +465,26 @@ export default function SystemConfig() {
   };
 
   useEffect(() => { loadOpenClawDirFn(); }, []);
+
+  const loadUpdateProxy = async () => {
+    setUpdateProxyLoading(true);
+    try {
+      const r = await api.getUpdateProxy();
+      if (r.ok) setUpdateProxy(r.proxy || '');
+    } catch {} finally { setUpdateProxyLoading(false); }
+  };
+
+  const saveUpdateProxy = async () => {
+    setUpdateProxySaving(true);
+    try {
+      const r = await api.setUpdateProxy(updateProxy);
+      if (r.ok) { setMsg(i18n.common.success); }
+      else { setMsg('保存失败'); }
+    } catch { setMsg('保存失败'); }
+    finally { setUpdateProxySaving(false); setTimeout(() => setMsg(''), 3000); }
+  };
+
+  useEffect(() => { loadUpdateProxy(); }, []);
 
   const loadVersion = async () => {
     const [v, b] = await Promise.all([api.getSystemVersion(), api.getBackups()]);
@@ -1752,9 +1776,64 @@ export default function SystemConfig() {
             </div>
           </div>
 
+          <div className={`${modern ? 'page-modern-panel p-5' : 'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-5'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-xl bg-amber-100/80 dark:bg-amber-900/20 text-amber-600 border border-amber-100/70 dark:border-amber-800/30">
+                <Globe size={16} />
+              </div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{locale === 'zh-CN' ? '更新代理' : 'Update Proxy'}</h3>
+              <InfoTooltip content={locale === 'zh-CN' ? '配置 ClawPanel 检查更新和下载二进制时使用的 HTTP 代理。国内用户建议选择内置代理加速。' : 'Configure HTTP proxy for ClawPanel update checks and binary downloads.'} />
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  { value: '', label: locale === 'zh-CN' ? '不使用代理' : 'No Proxy', desc: 'direct' },
+                  { value: 'https://ghfast.top', label: 'ghfast.top', desc: locale === 'zh-CN' ? '国内常用' : 'Popular CN' },
+                  { value: 'https://ghgo.xyz', label: 'ghgo.xyz', desc: locale === 'zh-CN' ? '国内常用' : 'Popular CN' },
+                  { value: 'https://gh-proxy.com', label: 'gh-proxy.com', desc: locale === 'zh-CN' ? '国内常用' : 'Popular CN' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setUpdateProxy(opt.value); setCustomProxy(''); }}
+                    className={`px-3 py-2.5 text-xs font-medium rounded-lg border transition-all text-left ${
+                      updateProxy === opt.value && customProxy === ''
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300'
+                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="font-semibold">{opt.label}</div>
+                    <div className="text-[10px] opacity-60 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={customProxy}
+                  onChange={e => { setCustomProxy(e.target.value); if (e.target.value) setUpdateProxy(e.target.value); }}
+                  placeholder={locale === 'zh-CN' ? '自定义代理地址 (https://...)' : 'Custom proxy URL (https://...)'}
+                  className="flex-1 px-3.5 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all font-mono"
+                />
+                <button
+                  onClick={saveUpdateProxy}
+                  disabled={updateProxySaving || updateProxyLoading}
+                  className={`${modern ? 'page-modern-action px-4 py-2 text-xs font-medium disabled:opacity-50' : 'flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 shadow-sm transition-all'}`}
+                >
+                  {updateProxySaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+                  {updateProxySaving ? (locale === 'zh-CN' ? '保存中...' : 'Saving...') : (locale === 'zh-CN' ? '保存' : 'Save')}
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400">
+                {locale === 'zh-CN'
+                  ? '代理优先级：自定义地址 > 环境变量 CLAWPANEL_UPDATE_PROXY > 系统代理。设置为"不使用代理"将直连 GitHub。'
+                  : 'Priority: custom URL > env CLAWPANEL_UPDATE_PROXY > system proxy. "No Proxy" connects directly to GitHub.'}
+              </p>
+            </div>
+          </div>
+
           <ConfigGroup
             title="基础接入"
-            description="先把 OpenClaw 对外入口、认证方式和基础密钥整理好。这里的内容最接近“机器怎么连起来”。"
+            description={'先把 OpenClaw 对外入口、认证方式和基础密钥整理好。这里的内容最接近"机器怎么连起来"。'}
           >
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <CfgSection title="网关配置" icon={Globe} defaultExpanded description="决定 OpenClaw Control / Gateway 监听在哪、怎么暴露、是否要求认证访问。" fields={[

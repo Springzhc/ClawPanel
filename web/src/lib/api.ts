@@ -189,6 +189,8 @@ const _api = {
   setWorkspacePath: (path: string) => put('/workspace/path', { path }),
   getOpenClawDir: () => get('/openclaw/dir'),
   setOpenClawDir: (path: string) => put('/openclaw/dir', { path }),
+  getUpdateProxy: () => get('/panel/update-proxy'),
+  setUpdateProxy: (proxy: string) => put('/panel/update-proxy', { proxy }),
   // System
   getSystemEnv: () => get('/system/env'),
   getSystemVersion: () => get('/system/version'),

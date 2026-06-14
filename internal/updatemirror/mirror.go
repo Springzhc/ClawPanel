@@ -21,6 +21,7 @@ type EditionSpec struct {
 	Edition           string
 	GitHubReleasesAPI string
 	GitHubTagPrefix   string
+	ProxyURL          string
 }
 
 type Manifest struct {
@@ -89,7 +90,7 @@ func EnsureAsset(dataDir string, spec EditionSpec, manifest *Manifest, platformK
 		return "", err
 	}
 	tmpPath := dest + ".tmp"
-	if err := downloadToFile(remoteURL, tmpPath); err != nil {
+	if err := downloadToFile(remoteURL, tmpPath, spec.ProxyURL); err != nil {
 		return "", err
 	}
 	actualSHA, err := fileSHA256(tmpPath)
@@ -132,7 +133,7 @@ func filesDir(dataDir string, spec EditionSpec) string {
 }
 
 func fetchLatestManifest(dataDir string, spec EditionSpec, publicBasePath string) (*Manifest, error) {
-	client := newHTTPClient(30 * time.Second)
+	client := newHTTPClient(30*time.Second, spec.ProxyURL)
 	resp, err := client.Get(spec.GitHubReleasesAPI)
 	if err != nil {
 		return nil, err
@@ -317,16 +318,28 @@ func updateAssetName(edition, version, platformKey string) string {
 	return name
 }
 
-func newHTTPClient(timeout time.Duration) *http.Client {
+func newHTTPClient(timeout time.Duration, proxyURL ...string) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = proxyFunc()
+	transport.Proxy = resolveProxyFunc(proxyURL...)
 	return &http.Client{
 		Timeout:   timeout,
 		Transport: transport,
 	}
 }
 
-func proxyFunc() func(*http.Request) (*url.URL, error) {
+func resolveProxyFunc(proxyURL ...string) func(*http.Request) (*url.URL, error) {
+	// Priority: explicit parameter > env var > system proxy
+	for _, raw := range proxyURL {
+		if raw = strings.TrimSpace(raw); raw != "" {
+			if strings.EqualFold(raw, "direct") || strings.EqualFold(raw, "none") {
+				return nil
+			}
+			parsed, err := url.Parse(raw)
+			if err == nil {
+				return http.ProxyURL(parsed)
+			}
+		}
+	}
 	if raw := strings.TrimSpace(os.Getenv("CLAWPANEL_UPDATE_PROXY")); raw != "" {
 		parsed, err := url.Parse(raw)
 		if err == nil {
@@ -336,8 +349,8 @@ func proxyFunc() func(*http.Request) (*url.URL, error) {
 	return http.ProxyFromEnvironment
 }
 
-func downloadToFile(rawURL, dest string) error {
-	client := newHTTPClient(10 * time.Minute)
+func downloadToFile(rawURL, dest string, proxyURL ...string) error {
+	client := newHTTPClient(10*time.Minute, proxyURL...)
 	resp, err := client.Get(rawURL)
 	if err != nil {
 		return err

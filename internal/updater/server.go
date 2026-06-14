@@ -74,12 +74,17 @@ type Server struct {
 	ocState        UpdateState // OpenClaw update state
 	srv            *http.Server
 	running        bool
+	proxyURL       string
 }
 
 // NewServer creates a new updater server
-func NewServer(currentVersion, dataDir, openClawDir string, panelPort int, edition string) *Server {
+func NewServer(currentVersion, dataDir, openClawDir string, panelPort int, edition string, proxyURL ...string) *Server {
 	bin, _ := os.Executable()
 	bin, _ = filepath.EvalSymlinks(bin)
+	var proxy string
+	if len(proxyURL) > 0 {
+		proxy = proxyURL[0]
+	}
 	return &Server{
 		currentVersion: currentVersion,
 		dataDir:        dataDir,
@@ -87,6 +92,7 @@ func NewServer(currentVersion, dataDir, openClawDir string, panelPort int, editi
 		panelBin:       bin,
 		panelPort:      panelPort,
 		editionCfg:     newEditionConfig(edition),
+		proxyURL:       proxy,
 		state: UpdateState{
 			Phase: "idle",
 			Steps: defaultSteps(),
@@ -1021,6 +1027,7 @@ func (s *Server) mirrorSpec() updatemirror.EditionSpec {
 		Edition:           s.editionCfg.Edition,
 		GitHubReleasesAPI: s.editionCfg.GitHubReleasesAPI,
 		GitHubTagPrefix:   s.editionCfg.GitHubTagPrefix,
+		ProxyURL:          s.proxyURL,
 	}
 }
 

@@ -752,15 +752,19 @@ func ProxyUpdater(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
-func panelMirrorSpec(edition string) (updatemirror.EditionSpec, error) {
+func panelMirrorSpec(edition string, cfg *config.Config) (updatemirror.EditionSpec, error) {
 	edition = strings.ToLower(strings.TrimSpace(edition))
 	switch edition {
 	case "", "pro":
-		return updatemirror.EditionSpec{
+		spec := updatemirror.EditionSpec{
 			Edition:           "pro",
-			GitHubReleasesAPI: "https://api.github.com/repos/zhaoxinyi02/ClawPanel/releases?per_page=20",
+			GitHubReleasesAPI: "https://api.github.com/repos/Springzhc/ClawPanel/releases?per_page=20",
 			GitHubTagPrefix:   "pro-v",
-		}, nil
+		}
+		if cfg != nil {
+			spec.ProxyURL = cfg.GetUpdateProxy()
+		}
+		return spec, nil
 	default:
 		return updatemirror.EditionSpec{}, fmt.Errorf("不支持的 edition: %s", edition)
 	}
@@ -768,7 +772,7 @@ func panelMirrorSpec(edition string) (updatemirror.EditionSpec, error) {
 
 func GetPanelUpdateMirror(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		spec, err := panelMirrorSpec(c.Param("edition"))
+		spec, err := panelMirrorSpec(c.Param("edition"), cfg)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 			return
@@ -785,7 +789,7 @@ func GetPanelUpdateMirror(cfg *config.Config) gin.HandlerFunc {
 
 func GetPanelUpdateMirrorFile(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		spec, err := panelMirrorSpec(c.Param("edition"))
+		spec, err := panelMirrorSpec(c.Param("edition"), cfg)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 			return

@@ -20,7 +20,7 @@ func newEditionConfig(edition string) editionConfig {
 		Edition:           "pro",
 		ServiceName:       "clawpanel",
 		BinaryName:        "clawpanel",
-		GitHubReleasesAPI: "https://api.github.com/repos/zhaoxinyi02/ClawPanel/releases?per_page=20",
+		GitHubReleasesAPI: "https://api.github.com/repos/Springzhc/ClawPanel/releases?per_page=20",
 		GitHubTagPrefix:   "pro-v",
 	}
 }

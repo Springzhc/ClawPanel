@@ -466,6 +466,26 @@ func SetOpenClawDir(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
+func GetUpdateProxy(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(200, gin.H{"ok": true, "proxy": cfg.GetUpdateProxy()})
+	}
+}
+
+func SetUpdateProxy(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var body struct {
+			Proxy string `json:"proxy"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(400, gin.H{"ok": false, "error": err.Error()})
+			return
+		}
+		cfg.SetUpdateProxy(body.Proxy)
+		c.JSON(200, gin.H{"ok": true})
+	}
+}
+
 // Unused imports suppressor
 var _ = io.EOF
 var _ = sort.Strings

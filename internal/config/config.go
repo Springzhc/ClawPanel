@@ -29,6 +29,7 @@ type Config struct {
 	JWTSecret    string `json:"jwtSecret"`
 	AdminToken   string `json:"adminToken"`
 	Debug        bool   `json:"debug"`
+	UpdateProxy  string `json:"updateProxy,omitempty"`
 	mu           sync.RWMutex
 }
 
@@ -387,6 +388,21 @@ func (c *Config) GetOpenClawDir() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.OpenClawDir
+}
+
+// GetUpdateProxy 获取更新代理地址
+func (c *Config) GetUpdateProxy() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.UpdateProxy
+}
+
+// SetUpdateProxy 设置更新代理地址
+func (c *Config) SetUpdateProxy(proxy string) {
+	c.mu.Lock()
+	c.UpdateProxy = proxy
+	c.mu.Unlock()
+	c.Save()
 }
 
 // getDataDir 获取数据目录（与可执行文件同目录）
