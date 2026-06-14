@@ -71,6 +71,7 @@ function DashboardPage({ logEntries, refreshLog }: DashboardProps) {
   const [autoScroll, setAutoScroll] = useState(true);
   const logRef = useRef<HTMLDivElement>(null);
   const [sessionActivity, setSessionActivity] = useState<SessionActivityItem[]>([]);
+  const [usageData, setUsageData] = useState<any>(null);
 
   useEffect(() => {
     api.getStatus().then(r => { if (r.ok) setStatus(r); });
@@ -93,6 +94,18 @@ function DashboardPage({ logEntries, refreshLog }: DashboardProps) {
     loadSessionActivity();
     const t = setInterval(loadSessionActivity, 10000);
     const onVisible = () => { if (!document.hidden) loadSessionActivity(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
+
+  useEffect(() => {
+    const loadUsage = () => {
+      if (document.hidden) return;
+      api.getSessionUsage().then(r => { if (r.ok) setUsageData(r); }).catch(() => {});
+    };
+    loadUsage();
+    const t = setInterval(loadUsage, 30000);
+    const onVisible = () => { if (!document.hidden) loadUsage(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
@@ -302,6 +315,89 @@ function DashboardPage({ logEntries, refreshLog }: DashboardProps) {
         )}
       </div>
 
+      {/* Model Usage Summary */}
+      {usageData && (usageData.agents?.length > 0 || usageData.today?.totalTokens > 0) && (
+        <div className={`${modern ? 'rounded-[28px] border border-white/60 dark:border-slate-700/50 bg-[linear-gradient(145deg,rgba(255,255,255,0.84),rgba(248,250,252,0.7))] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(51,65,85,0.22))] backdrop-blur-xl shadow-[0_22px_48px_rgba(15,23,42,0.06)]' : 'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50'} p-5`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-xl border border-violet-100/80 dark:border-violet-800/40 bg-violet-50/80 dark:bg-violet-900/20 text-violet-600 dark:text-violet-300 shadow-sm">
+                <TrendingUp size={16} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-gray-900 dark:text-white">模型消耗统计</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">今日 · 7日 · 30日汇总</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.assign('/sessions')}
+              className={`${modern ? 'page-modern-action px-3 py-1.5 text-xs' : 'px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'}`}
+            >
+              查看详情
+            </button>
+          </div>
+          
+          {/* Summary Cards */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {[
+              { label: '今日', data: usageData.today },
+              { label: '近7天', data: usageData.last7d },
+              { label: '近30天', data: usageData.last30d },
+            ].map(({ label, data }) => (
+              <div key={label} className="rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 p-3">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-2">{label}</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] text-slate-500 dark:text-white/50">Tokens</span>
+                    <span className="text-sm font-bold text-violet-600 dark:text-violet-400 font-mono">
+                      {data?.totalTokens ? (data.totalTokens >= 1000000 ? (data.totalTokens / 1000000).toFixed(1) + 'M' : data.totalTokens >= 1000 ? (data.totalTokens / 1000).toFixed(1) + 'K' : data.totalTokens) : '0'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] text-slate-500 dark:text-white/50">成本</span>
+                    <span className="text-sm font-bold text-amber-600 dark:text-amber-400 font-mono">
+                      ${data?.totalCost ? data.totalCost.toFixed(2) : '0.00'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] text-slate-500 dark:text-white/50">请求数</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400 font-mono">
+                      {data?.requests || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Per Agent Breakdown */}
+          {usageData.agents && usageData.agents.length > 0 && (
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider mb-2">按智能体统计（7日）</p>
+              <div className="space-y-2">
+                {usageData.agents.slice(0, 5).map((agent: any) => (
+                  <div key={agent.agentId} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center">
+                      <Bot size={14} className="text-violet-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-gray-700 dark:text-white/70 truncate">{agent.agentId}</p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[10px] text-slate-400 dark:text-white/40">
+                          <span className="font-mono text-violet-500">{agent.last7d?.totalTokens ? (agent.last7d.totalTokens / 1000).toFixed(1) + 'K' : '0'}</span> tokens
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-white/40">
+                          <span className="font-mono text-amber-500">${agent.last7d?.totalCost ? agent.last7d.totalCost.toFixed(2) : '0.00'}</span> cost
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {oc.configured && (queuedTasks + runningTasks > 0 || taskIssues > 0 || taskFocusTitle) && (
         <div className={`${modern ? 'rounded-[28px] border border-white/60 dark:border-slate-700/50 bg-[linear-gradient(145deg,rgba(255,255,255,0.84),rgba(248,250,252,0.7))] dark:bg-[linear-gradient(145deg,rgba(15,23,42,0.92),rgba(51,65,85,0.22))] backdrop-blur-xl shadow-[0_22px_48px_rgba(15,23,42,0.06)]' : 'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50'} p-5`}>
           <div className="flex items-start justify-between gap-4">
@@ -442,9 +538,9 @@ function StatCard({ icon: Icon, label, value, unit, color, bg, sub, modern }: { 
         {sub && <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full max-w-[124px] truncate border ${modern ? 'bg-white/75 text-slate-500 border-white/75 dark:bg-slate-900/50 dark:border-slate-700/60' : 'bg-gray-50 dark:bg-gray-700 text-gray-500'}`}>{sub}</span>}
       </div>
       <div>
-        <p className={`text-[10px] font-medium uppercase tracking-wider mb-0.5 ${modern ? 'text-slate-400' : 'text-gray-400'}`}>{label}</p>
+        <p className={`text-[20px] font-medium uppercase tracking-wider mb-0.5 ${modern ? 'text-slate-400' : 'text-gray-400'}`}>{label}</p>
         <div className="flex items-baseline gap-1">
-          <span className={`${modern ? 'text-[28px] leading-none' : 'text-lg'} font-bold text-gray-900 dark:text-white tracking-tight`}>{value}</span>
+          <span className={`${modern ? 'text-[20px] leading-none' : 'text-lg'} font-bold text-gray-900 dark:text-white tracking-tight`}>{value}</span>
           {unit && <span className={`font-medium ${modern ? 'text-xs text-slate-400' : 'text-[10px] text-gray-400'}`}>{unit}</span>}
         </div>
       </div>

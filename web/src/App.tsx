@@ -31,6 +31,7 @@ const loadHermesLogs = () => import('./pages/HermesLogs');
 const loadHermesActions = () => import('./pages/HermesActions');
 const loadHermesTasks = () => import('./pages/HermesTasks');
 const loadHermesProfiles = () => import('./pages/HermesProfiles');
+const loadAgentCollab = () => import('./pages/AgentCollab');
 
 const ActivityLog = lazy(loadActivityLog);
 const PanelChat = lazy(loadPanelChat);
@@ -55,6 +56,7 @@ const HermesLogs = lazy(loadHermesLogs);
 const HermesActions = lazy(loadHermesActions);
 const HermesTasks = lazy(loadHermesTasks);
 const HermesProfiles = lazy(loadHermesProfiles);
+const AgentCollab = lazy(loadAgentCollab);
 const CompanyOverview = lazy(() => import('./pages/CompanyOverview'));
 const CompanyTasks = lazy(() => import('./pages/CompanyTasks'));
 const CompanyTaskDetail = lazy(() => import('./pages/CompanyTaskDetail'));
@@ -140,6 +142,7 @@ export default function App() {
         {enableAgents && (
           <Route path="/monitor" element={<OpenClawRequired openclawStatus={ws.openclawStatus} processStatus={ws.processStatus}><Suspense fallback={<RouteLoadingFallback />}><Monitor /></Suspense></OpenClawRequired>} />
         )}
+        <Route path="/agent-collab" element={<Suspense fallback={<RouteLoadingFallback />}><AgentCollab /></Suspense>} />
         <Route path="/workflows" element={<OpenClawRequired openclawStatus={ws.openclawStatus} processStatus={ws.processStatus}><Suspense fallback={<RouteLoadingFallback />}><Workflows /></Suspense></OpenClawRequired>} />
         <Route path="/company" element={<OpenClawRequired openclawStatus={ws.openclawStatus} processStatus={ws.processStatus}><Suspense fallback={<RouteLoadingFallback />}><CompanyOverview /></Suspense></OpenClawRequired>} />
         <Route path="/company/tasks" element={<OpenClawRequired openclawStatus={ws.openclawStatus} processStatus={ws.processStatus}><Suspense fallback={<RouteLoadingFallback />}><CompanyTasks /></Suspense></OpenClawRequired>} />

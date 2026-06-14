@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ScrollText, Radio, Sparkles, Clock, Settings,
   Moon, Sun, LogOut, Menu, FolderOpen, Languages, MessageSquare,
-  RotateCw, RefreshCw, Power, Puzzle, Bot, Search, Bell, ChevronDown, GitBranch, Network, BriefcaseBusiness, Activity, Brain, TerminalSquare, FileStack, Key, X,
+  RotateCw, RefreshCw, Power, Puzzle, Bot, Search, Bell, ChevronDown, GitBranch, Network, BriefcaseBusiness, Activity, Brain, TerminalSquare, FileStack, Key, X, Users,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import AIAssistant from './AIAssistant';
@@ -262,6 +262,7 @@ function LayoutShell({ onLogout, napcatStatus, wechatStatus, openclawStatus, pro
     { to: '/skills', icon: Sparkles, label: t.nav.skills },
     { to: '/plugins', icon: Puzzle, label: locale === 'zh-CN' ? '插件中心' : 'Plugins' },
     ...(enableAgents ? [{ to: '/agents', icon: Bot, label: locale === 'zh-CN' ? '智能体' : 'Agents' }] : []),
+    ...(enableAgents ? [{ to: '/agent-collab', icon: Users, label: locale === 'zh-CN' ? '智能体协作' : 'Agent Collab' }] : []),
     ...(enableAgents ? [{ to: '/monitor', icon: Network, label: locale === 'zh-CN' ? '编排监控' : 'Monitor' }] : []),
     { to: '/workflows', icon: GitBranch, label: locale === 'zh-CN' ? '工作流' : 'Workflows' },
     { to: '/company', icon: BriefcaseBusiness, label: locale === 'zh-CN' ? 'AI公司' : 'AI Company' },
