@@ -452,6 +452,8 @@ func runServer(stopCh chan struct{}) {
 			auth.PUT("/workspace/config", handler.WorkspaceUpdateConfig(cfg))
 			auth.GET("/workspace/path", handler.GetWorkspacePath(cfg))
 			auth.PUT("/workspace/path", handler.SetWorkspacePath(cfg))
+			auth.GET("/openclaw/dir", handler.GetOpenClawDir(cfg))
+			auth.PUT("/openclaw/dir", handler.SetOpenClawDir(cfg))
 			auth.POST("/workspace/upload", handler.WorkspaceUpload(cfg))
 			auth.POST("/workspace/mkdir", handler.WorkspaceMkdir(cfg))
 			auth.POST("/workspace/delete", handler.WorkspaceDelete(cfg))

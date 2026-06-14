@@ -374,6 +374,21 @@ func (c *Config) GetOpenClawWork() string {
 	return c.OpenClawWork
 }
 
+// SetOpenClawDir 修改 OpenClaw 配置目录路径
+func (c *Config) SetOpenClawDir(path string) {
+	c.mu.Lock()
+	c.OpenClawDir = path
+	c.mu.Unlock()
+	c.Save()
+}
+
+// GetOpenClawDir 获取 OpenClaw 配置目录路径
+func (c *Config) GetOpenClawDir() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.OpenClawDir
+}
+
 // getDataDir 获取数据目录（与可执行文件同目录）
 func getDataDir() string {
 	if v := os.Getenv("CLAWPANEL_DATA"); v != "" {

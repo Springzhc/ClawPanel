@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-yaml"
 	"github.com/zhaoxinyi02/ClawPanel/internal/config"
+	_ "modernc.org/sqlite"
 )
 
 type skillInfo struct {
@@ -387,6 +389,15 @@ func CopySkill(cfg *config.Config) gin.HandlerFunc {
 // GetCronJobs returns cron jobs from openclaw.json cron.jobs.
 func GetCronJobs(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 1. Try reading from SQLite (OpenClaw 2026.6.1+)
+		if jobs := readCronJobsFromSQLite(cfg); len(jobs) > 0 {
+			// T12: Normalize legacy delivery fields → canonical delivery on read
+			normalizeCronJobs(jobs)
+			c.JSON(http.StatusOK, gin.H{"ok": true, "jobs": jobs})
+			return
+		}
+
+		// 2. Fallback: read from openclaw.json
 		oc, _ := cfg.ReadOpenClawJSON()
 		jobs := make([]interface{}, 0)
 		if oc != nil {
@@ -396,6 +407,7 @@ func GetCronJobs(cfg *config.Config) gin.HandlerFunc {
 				}
 			}
 		}
+		// 3. Fallback: read from cron/jobs.json
 		if len(jobs) == 0 {
 			if raw, err := os.ReadFile(filepath.Join(cfg.OpenClawDir, "cron", "jobs.json")); err == nil {
 				var saved map[string]interface{}
@@ -407,61 +419,103 @@ func GetCronJobs(cfg *config.Config) gin.HandlerFunc {
 			}
 		}
 		// T12: Normalize legacy delivery fields → canonical delivery on read
-		for i, raw := range jobs {
-			job, ok := raw.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			// If job already has delivery.mode, keep it and normalize webhook fields
-			// to canonical delivery.to (legacy delivery.url remains read-compatible).
-			if del, ok := job["delivery"].(map[string]interface{}); ok {
-				if m, hasMode := del["mode"]; hasMode {
-					mode := strings.ToLower(strings.TrimSpace(toString(m)))
-					if mode != "" {
-						del["mode"] = mode
-						if mode == "webhook" {
-							target := strings.TrimSpace(toString(del["to"]))
-							if target == "" {
-								target = strings.TrimSpace(toString(del["url"]))
-							}
-							if target != "" {
-								del["to"] = target
-							}
-							delete(del, "url")
-						}
-						job["delivery"] = del
-						jobs[i] = job
-						continue
-					}
-				}
-				// Incomplete delivery object (no mode) — remove so legacy promotion runs
-				delete(job, "delivery")
-			}
-			// Promote from legacy payload.deliver / payload.channel / payload.to
-			payload, _ := job["payload"].(map[string]interface{})
-			if payload == nil {
-				continue
-			}
-			deliver, _ := payload["deliver"].(bool)
-			channel, _ := payload["channel"].(string)
-			to, _ := payload["to"].(string)
-			bestEffort, _ := payload["bestEffortDeliver"].(bool)
-			if deliver || channel != "" || to != "" {
-				del := map[string]interface{}{"mode": "announce"}
-				if channel != "" {
-					del["channel"] = channel
-				}
-				if to != "" {
-					del["to"] = to
-				}
-				if bestEffort {
-					del["bestEffort"] = true
-				}
-				job["delivery"] = del
-				jobs[i] = job
-			}
-		}
+		normalizeCronJobs(jobs)
 		c.JSON(http.StatusOK, gin.H{"ok": true, "jobs": jobs})
+	}
+}
+
+// readCronJobsFromSQLite reads cron jobs from OpenClaw's SQLite state database.
+// OpenClaw 2026.6.1+ stores cron jobs in {openClawDir}/state/openclaw.sqlite.
+func readCronJobsFromSQLite(cfg *config.Config) []interface{} {
+	if cfg == nil || cfg.OpenClawDir == "" {
+		return nil
+	}
+	dbPath := filepath.Join(cfg.OpenClawDir, "state", "openclaw.sqlite")
+	db, err := sql.Open("sqlite", dbPath+"?mode=ro")
+	if err != nil {
+		return nil
+	}
+	defer db.Close()
+
+	// Check if cron_jobs table exists
+	var tableExists int
+	if err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='cron_jobs'").Scan(&tableExists); err != nil || tableExists == 0 {
+		return nil
+	}
+
+	// Read job_json from each row — this contains the full job config
+	rows, err := db.Query("SELECT job_json FROM cron_jobs ORDER BY sort_order ASC, updated_at ASC, job_id ASC")
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	jobs := make([]interface{}, 0)
+	for rows.Next() {
+		var jobJSON string
+		if err := rows.Scan(&jobJSON); err != nil {
+			continue
+		}
+		var job interface{}
+		if err := json.Unmarshal([]byte(jobJSON), &job); err != nil {
+			continue
+		}
+		jobs = append(jobs, job)
+	}
+	return jobs
+}
+
+// normalizeCronJobs normalizes legacy delivery fields on cron jobs.
+func normalizeCronJobs(jobs []interface{}) {
+	for i, raw := range jobs {
+		job, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if del, ok := job["delivery"].(map[string]interface{}); ok {
+			if m, hasMode := del["mode"]; hasMode {
+				mode := strings.ToLower(strings.TrimSpace(toString(m)))
+				if mode != "" {
+					del["mode"] = mode
+					if mode == "webhook" {
+						target := strings.TrimSpace(toString(del["to"]))
+						if target == "" {
+							target = strings.TrimSpace(toString(del["url"]))
+						}
+						if target != "" {
+							del["to"] = target
+						}
+						delete(del, "url")
+					}
+					job["delivery"] = del
+					jobs[i] = job
+					continue
+				}
+			}
+			delete(job, "delivery")
+		}
+		payload, _ := job["payload"].(map[string]interface{})
+		if payload == nil {
+			continue
+		}
+		deliver, _ := payload["deliver"].(bool)
+		channel, _ := payload["channel"].(string)
+		to, _ := payload["to"].(string)
+		bestEffort, _ := payload["bestEffortDeliver"].(bool)
+		if deliver || channel != "" || to != "" {
+			del := map[string]interface{}{"mode": "announce"}
+			if channel != "" {
+				del["channel"] = channel
+			}
+			if to != "" {
+				del["to"] = to
+			}
+			if bestEffort {
+				del["bestEffort"] = true
+			}
+			job["delivery"] = del
+			jobs[i] = job
+		}
 	}
 }
 
@@ -518,6 +572,8 @@ func SaveCronJobs(cfg *config.Config) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"ok": false, "error": err.Error()})
 			return
 		}
+		// Best-effort: also write to SQLite for OpenClaw 2026.6.1+
+		writeCronJobsToSQLite(cfg, req.Jobs)
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	}
 }
@@ -1548,6 +1604,80 @@ func writeCronJobsFile(cfg *config.Config, jobs []interface{}) error {
 	// leave a partially-written jobs.json (mirrors openclaw store.ts behaviour).
 	dest := filepath.Join(cfg.OpenClawDir, "cron", "jobs.json")
 	return replaceFileAtomically(dest, raw, 0644)
+}
+
+// writeCronJobsToSQLite writes cron jobs to OpenClaw's SQLite state database.
+// Best-effort: ignores errors so JSON file writes remain the primary path.
+func writeCronJobsToSQLite(cfg *config.Config, jobs []map[string]interface{}) {
+	if cfg == nil || cfg.OpenClawDir == "" {
+		return
+	}
+	dbPath := filepath.Join(cfg.OpenClawDir, "state", "openclaw.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	// Check table exists
+	var tableExists int
+	if err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='cron_jobs'").Scan(&tableExists); err != nil || tableExists == 0 {
+		return
+	}
+
+	storeKey := filepath.Join(cfg.OpenClawDir, "cron", "jobs.json")
+
+	tx, err := db.Begin()
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
+	// Delete existing rows for this store key
+	if _, err := tx.Exec("DELETE FROM cron_jobs WHERE store_key = ?", storeKey); err != nil {
+		return
+	}
+
+	// Insert new rows
+	stmt, err := tx.Prepare(`INSERT INTO cron_jobs (
+		store_key, job_id, name, enabled, session_target, payload_kind,
+		job_json, state_json, sort_order, created_at_ms, updated_at, runtime_updated_at_ms
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return
+	}
+	defer stmt.Close()
+
+	now := time.Now().UnixMilli()
+	for i, job := range jobs {
+		jobID, _ := job["id"].(string)
+		if jobID == "" {
+			jobID, _ = job["jobId"].(string)
+		}
+		if jobID == "" {
+			jobID = fmt.Sprintf("panel_%d", now+int64(i))
+		}
+		name, _ := job["name"].(string)
+		enabled := 1
+		if v, ok := job["enabled"].(bool); ok && !v {
+			enabled = 0
+		}
+		sessionTarget, _ := job["sessionTarget"].(string)
+		if sessionTarget == "" {
+			sessionTarget = "main"
+		}
+		payloadKind := "systemEvent"
+		if payload, ok := job["payload"].(map[string]interface{}); ok {
+			if k, ok := payload["kind"].(string); ok && k != "" {
+				payloadKind = k
+			}
+		}
+		jobJSON, _ := json.Marshal(job)
+		stmt.Exec(storeKey, jobID, name, enabled, sessionTarget, payloadKind,
+			string(jobJSON), "{}", i, now, now, now)
+	}
+
+	tx.Commit()
 }
 
 func expandSkillPath(baseDir, raw string) string {

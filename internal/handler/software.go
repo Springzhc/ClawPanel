@@ -1630,7 +1630,7 @@ if ($ocCmd) {
 
 Write-Output "📝 初始化配置..."
 # Create basic openclaw.json if it doesn't exist
-$openclawDir = Join-Path $env:USERPROFILE ".openclaw"
+$openclawDir = '%s'
 $openclawConfig = Join-Path $openclawDir "openclaw.json"
 if (-not (Test-Path $openclawDir)) {
   New-Item -ItemType Directory -Path $openclawDir -Force | Out-Null
@@ -1668,7 +1668,7 @@ if (Test-Path $openclawCmd) {
 }
 Write-Output "ℹ️ 初次安装后，网关状态同步可能需要 10-30 秒"
 Write-Output "✅ 全部完成"
-`, pinnedOpenClawVersion, pinnedOpenClawVersion, pinnedOpenClawVersion, pinnedOpenClawVersion)
+`, cfg.OpenClawDir, pinnedOpenClawVersion, pinnedOpenClawVersion, pinnedOpenClawVersion, pinnedOpenClawVersion)
 			} else {
 				script = fmt.Sprintf(`
 set -e

@@ -941,9 +941,8 @@ func SystemDiagnose(cfg *config.Config) gin.HandlerFunc {
 func diagnoseChannelTSStartAccount(cfg *config.Config, repair bool) []DiagnoseStep {
 	var steps []DiagnoseStep
 	ocDir := cfg.OpenClawDir
-	if ocDir == "" {
-		home, _ := os.UserHomeDir()
-		ocDir = filepath.Join(home, ".openclaw")
+	if strings.TrimSpace(ocDir) == "" {
+		return steps
 	}
 	channelTS := filepath.Join(ocDir, "extensions", "qq", "src", "channel.ts")
 	data, err := os.ReadFile(channelTS)

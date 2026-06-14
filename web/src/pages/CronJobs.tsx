@@ -120,6 +120,7 @@ function CronJobsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [agentOptions, setAgentOptions] = useState<string[]>([]);
   const [defaultAgent, setDefaultAgent] = useState('main');
@@ -237,6 +238,50 @@ function CronJobsPage() {
     }
   };
 
+  const startEdit = (job: CronJob) => {
+    setEditingId(job.id);
+    setShowCreate(true);
+    setNewName(job.name);
+    setNewMessage(job.payload.text || job.payload.message || '');
+    setNewAgentId(resolveAgentId(job, defaultAgent));
+    setNewSessionMode(resolveSessionMode(job) as 'main' | 'isolated');
+    setNewModelOverride(job.payload.model || '');
+    setNewThinkingLevel(job.payload.thinking || '');
+    setNewLightContext(Boolean(job.payload.lightContext));
+    setNewToolsAllow(Array.isArray(job.payload.toolsAllow) ? job.payload.toolsAllow.join(', ') : '');
+    const d = resolveDelivery(job);
+    setNewDeliveryMode(d.mode || 'none');
+    setNewDeliveryAccountId(d.accountId || '');
+    setNewWebhookUrl(d.mode === 'webhook' ? (d.to || d.url || '') : '');
+    setNewScheduleKind(job.schedule.kind as ScheduleKind);
+    if (job.schedule.kind === 'cron') setNewCron(job.schedule.expr || '0 9 * * *');
+    if (job.schedule.kind === 'every') setNewEveryMin(Math.round((job.schedule.everyMs || 3600000) / 60000));
+    if (job.schedule.kind === 'at') {
+      const dt = job.schedule.at ? new Date(job.schedule.at) : job.schedule.atMs ? new Date(job.schedule.atMs) : new Date();
+      setNewAtDateTime(dt.toISOString().slice(0, 16));
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setShowCreate(false);
+    setNewName('');
+    setNewMessage('');
+    setNewAgentId(defaultAgent || 'main');
+    setNewSessionMode('isolated');
+    setNewModelOverride('');
+    setNewThinkingLevel('');
+    setNewLightContext(false);
+    setNewToolsAllow('');
+    setNewDeliveryMode('announce');
+    setNewDeliveryAccountId('');
+    setNewWebhookUrl('');
+    setNewScheduleKind('cron');
+    setNewCron('0 9 * * *');
+    setNewEveryMin(60);
+    setNewAtDateTime('');
+  };
+
   const buildSchedule = (): CronJob['schedule'] => {
     if (newScheduleKind === 'cron') return { kind: 'cron', expr: newCron };
     if (newScheduleKind === 'every') return { kind: 'every', everyMs: Math.max(1, newEveryMin) * 60000 };
@@ -267,7 +312,6 @@ function CronJobsPage() {
       return;
     }
     const agentId = newAgentId || defaultAgent || 'main';
-    // T6: payload.kind is determined by sessionTarget
     const payloadKind = newSessionMode === 'main' ? 'systemEvent' : 'agentTurn';
     const payload: CronJob['payload'] = payloadKind === 'agentTurn'
       ? {
@@ -287,50 +331,46 @@ function CronJobsPage() {
             : {}),
         }
       : { kind: 'systemEvent', text: newMessage.trim() };
-    // T5: canonical delivery at top level
     const delivery: CronDelivery = newDeliveryMode === 'announce'
       ? { mode: 'announce', ...(newDeliveryAccountId ? { accountId: newDeliveryAccountId } : {}) }
       : newDeliveryMode === 'webhook'
         ? { mode: 'webhook', ...(newWebhookUrl ? { to: newWebhookUrl.trim() } : {}) }
         : { mode: 'none' };
-    const job: CronJob = {
-      id: 'cron_' + Date.now(),
-      name: newName.trim(),
-      enabled: true,
-      agentId,
-      schedule: buildSchedule(),
-      sessionTarget: newSessionMode,
-      wakeMode: 'now',
-      payload,
-      delivery,
-      state: {},
-      createdAtMs: Date.now(),
-    };
-    const updated = [...jobs, job];
+
+    let updated: CronJob[];
+    if (editingId) {
+      const existing = jobs.find(j => j.id === editingId);
+      updated = jobs.map(j => j.id === editingId
+        ? { ...j, name: newName.trim(), agentId, schedule: buildSchedule(), sessionTarget: newSessionMode, payload, delivery }
+        : j
+      );
+    } else {
+      const job: CronJob = {
+        id: 'cron_' + Date.now(),
+        name: newName.trim(),
+        enabled: true,
+        agentId,
+        schedule: buildSchedule(),
+        sessionTarget: newSessionMode,
+        wakeMode: 'now',
+        payload,
+        delivery,
+        state: {},
+        createdAtMs: Date.now(),
+      };
+      updated = [...jobs, job];
+    }
+
     setJobs(updated);
     try {
       await api.updateCronJobs(updated);
-      setMsg(t.cron.createSuccess);
-      setShowCreate(false);
-      setNewName('');
-      setNewMessage('');
-      setNewAgentId(defaultAgent || 'main');
-      setNewSessionMode('isolated');
-      setNewModelOverride('');
-      setNewThinkingLevel('');
-      setNewLightContext(false);
-      setNewToolsAllow('');
-      setNewDeliveryMode('announce');
-      setNewDeliveryAccountId('');
-      setNewWebhookUrl('');
-      setNewScheduleKind('cron');
-      setNewCron('0 9 * * *');
-      setNewEveryMin(60);
-      setNewAtDateTime('');
+      setMsg(editingId ? (locale === 'zh-CN' ? '任务已更新' : 'Job updated') : t.cron.createSuccess);
+      cancelEdit();
       setTimeout(() => setMsg(''), 2000);
     } catch {
       loadJobs();
-      setMsg(t.cron.createFailed);
+      setMsg(editingId ? t.common.operationFailed : t.cron.createFailed);
+      cancelEdit();
       setTimeout(() => setMsg(''), 2000);
     }
   };
@@ -379,7 +419,7 @@ function CronJobsPage() {
           <button onClick={loadJobs} className={`${modern ? 'page-modern-action' : 'flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors shadow-sm'}`}>
             <RefreshCw size={14} />{t.cron.refreshList}
           </button>
-          <button onClick={() => setShowCreate(!showCreate)}
+          <button onClick={() => { cancelEdit(); setShowCreate(true); }}
             className={`${modern ? 'page-modern-accent' : 'flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-200 dark:shadow-none transition-all hover:shadow-md hover:shadow-violet-200 dark:hover:shadow-none'}`}>
             <Plus size={14} />{t.cron.newJob}
           </button>
@@ -398,9 +438,9 @@ function CronJobsPage() {
         <div className={`${modern ? 'page-modern-panel p-6 space-y-5 animate-in fade-in slide-in-from-top-4 duration-200' : 'bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-violet-100 dark:border-violet-900/30 p-6 space-y-5 animate-in fade-in slide-in-from-top-4 duration-200'}`}>
           <div className="flex items-center gap-2 pb-4 border-b border-gray-100 dark:border-gray-700/50">
             <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-600">
-              <Plus size={16} />
+              {editingId ? <Edit3 size={16} /> : <Plus size={16} />}
             </div>
-            <h3 className="font-bold text-gray-900 dark:text-white">{t.cron.createJob}</h3>
+            <h3 className="font-bold text-gray-900 dark:text-white">{editingId ? t.cron.editJob || '编辑任务' : t.cron.createJob}</h3>
           </div>
 
           {/* Row 1: name */}
@@ -670,8 +710,8 @@ function CronJobsPage() {
               )}
             </div>
             <div className="flex items-center justify-end gap-3 pt-1">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">{t.common.cancel}</button>
-              <button onClick={createJob} className={`${modern ? 'page-modern-accent px-6 py-2 text-sm' : 'px-6 py-2 text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 rounded-lg shadow-sm shadow-violet-200 dark:shadow-none transition-all hover:shadow-md hover:shadow-violet-200 dark:hover:shadow-none'}`}>{t.cron.createNow}</button>
+              <button onClick={cancelEdit} className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">{t.common.cancel}</button>
+              <button onClick={createJob} className={`${modern ? 'page-modern-accent px-6 py-2 text-sm' : 'px-6 py-2 text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 rounded-lg shadow-sm shadow-violet-200 dark:shadow-none transition-all hover:shadow-md hover:shadow-violet-200 dark:hover:shadow-none'}`}>{editingId ? (locale === 'zh-CN' ? '保存修改' : 'Save Changes') : t.cron.createNow}</button>
             </div>
           </div>
         </div>
@@ -759,6 +799,11 @@ function CronJobsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => startEdit(job)}
+                      className="p-2 rounded-lg text-blue-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      title={locale === 'zh-CN' ? '编辑' : 'Edit'}>
+                      <Edit3 size={16} />
+                    </button>
                     <button onClick={() => toggleJob(job.id)}
                       className={`p-2 rounded-lg transition-colors ${job.enabled ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}
                       title={job.enabled ? t.common.paused : t.common.enabled}>

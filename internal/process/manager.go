@@ -565,10 +565,6 @@ func (m *Manager) readGatewayConfig() map[string]interface{} {
 		return nil
 	}
 	ocDir := m.cfg.OpenClawDir
-	if ocDir == "" {
-		home, _ := os.UserHomeDir()
-		ocDir = filepath.Join(home, ".openclaw")
-	}
 	if strings.TrimSpace(ocDir) == "" {
 		return nil
 	}
@@ -995,9 +991,8 @@ func (m *Manager) monitorDaemon() {
 // channels.qq / plugins.entries.qq / plugins.installs.qq。
 func (m *Manager) ensureOpenClawConfig() {
 	ocDir := m.cfg.OpenClawDir
-	if ocDir == "" {
-		home, _ := os.UserHomeDir()
-		ocDir = filepath.Join(home, ".openclaw")
+	if strings.TrimSpace(ocDir) == "" {
+		return
 	}
 	cfgPath := filepath.Join(ocDir, "openclaw.json")
 

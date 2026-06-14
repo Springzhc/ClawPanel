@@ -1,7 +1,7 @@
 package buildinfo
 
 var (
-	Version = "dev"
+	Version = "5.5.2s"
 	Edition = "pro"
 )
 

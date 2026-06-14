@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { api } from '../lib/api';
-import { ExternalLink, FileCog, RefreshCw, Save, SlidersHorizontal, Settings2 } from 'lucide-react';
+import { ExternalLink, FileCog, RefreshCw, Save, SlidersHorizontal, Settings2, Download, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useI18n } from '../i18n';
 
 interface HermesStatus {
+  installed?: boolean;
+  running?: boolean;
+  version?: string;
+  binaryPath?: string;
   configPath?: string;
   envPath?: string;
   homeDir?: string;
@@ -32,6 +36,8 @@ export default function HermesConfig() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeResult, setUpgradeResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -95,6 +101,24 @@ export default function HermesConfig() {
     }
   };
 
+  const runUpgrade = async () => {
+    setUpgrading(true);
+    setUpgradeResult(null);
+    try {
+      const r = await api.runHermesAction('update');
+      if (r.ok) {
+        setUpgradeResult({ ok: true, message: r.message || (locale === 'zh-CN' ? '升级任务已启动' : 'Upgrade task started') });
+        await load();
+      } else {
+        setUpgradeResult({ ok: false, message: r.error || (locale === 'zh-CN' ? '升级失败' : 'Upgrade failed') });
+      }
+    } catch {
+      setUpgradeResult({ ok: false, message: locale === 'zh-CN' ? '升级请求失败' : 'Upgrade request failed' });
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
   const blocks: Array<{ key: keyof StructuredConfig; label: string }> = [
     { key: 'model', label: 'Model' },
     { key: 'gateway', label: 'Gateway' },
@@ -129,6 +153,63 @@ export default function HermesConfig() {
 
       {msg && <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/10 dark:text-emerald-300">{msg}</div>}
       {err && <div className="rounded-2xl border border-red-100 bg-red-50/80 px-4 py-3 text-sm text-red-700 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-300">{err}</div>}
+
+      {/* Version & Upgrade Section */}
+      <div className={`${modern ? 'page-modern-panel' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50'} rounded-2xl p-5`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${status?.installed ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
+              {status?.installed
+                ? <CheckCircle2 size={20} className="text-emerald-500" />
+                : <AlertCircle size={20} className="text-gray-400" />}
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                {locale === 'zh-CN' ? 'Hermes 版本' : 'Hermes Version'}
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                {status?.version
+                  ? status.version
+                  : status?.installed
+                    ? (locale === 'zh-CN' ? '已安装（版本未知）' : 'Installed (version unknown)')
+                    : (locale === 'zh-CN' ? '未安装' : 'Not installed')}
+              </div>
+            </div>
+            {status?.binaryPath && (
+              <div className="hidden sm:block ml-2 text-[11px] font-mono text-gray-400 max-w-[200px] truncate" title={status.binaryPath}>
+                {status.binaryPath}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {status?.installed && (
+              <button
+                onClick={runUpgrade}
+                disabled={upgrading}
+                className={`${modern ? 'page-modern-accent' : 'bg-blue-600 text-white'} px-4 py-2 text-xs rounded-xl inline-flex items-center gap-2 disabled:opacity-50`}
+              >
+                <ArrowUpCircle size={14} className={upgrading ? 'animate-spin' : ''} />
+                {upgrading
+                  ? (locale === 'zh-CN' ? '升级中...' : 'Upgrading...')
+                  : (locale === 'zh-CN' ? '升级到最新版' : 'Upgrade to latest')}
+              </button>
+            )}
+            {!status?.installed && (
+              <span className="text-xs text-gray-400">
+                {locale === 'zh-CN' ? '请先安装 Hermes' : 'Please install Hermes first'}
+              </span>
+            )}
+          </div>
+        </div>
+        {upgradeResult && (
+          <div className={`mt-3 rounded-xl px-4 py-2.5 text-sm ${upgradeResult.ok
+            ? 'border border-emerald-100 bg-emerald-50/80 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/10 dark:text-emerald-300'
+            : 'border border-red-100 bg-red-50/80 text-red-700 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-300'
+          }`}>
+            {upgradeResult.message}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className={`${modern ? 'page-modern-panel' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50'} rounded-2xl p-5 space-y-4`}>
@@ -173,6 +254,45 @@ export default function HermesConfig() {
                 value={config.model?.max_tokens ?? config.model?.maxTokens ?? ''}
                 onChange={e => updateNested('model', 'max_tokens', e.target.value === '' ? undefined : Number(e.target.value))}
                 placeholder="4096"
+                className="w-full rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/70 dark:bg-gray-900/40 px-3 py-2 text-sm outline-none"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Top P</span>
+              <input
+                type="number"
+                step="0.05"
+                min="0"
+                max="1"
+                value={config.model?.top_p ?? ''}
+                onChange={e => updateNested('model', 'top_p', e.target.value === '' ? undefined : Number(e.target.value))}
+                placeholder="1.0"
+                className="w-full rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/70 dark:bg-gray-900/40 px-3 py-2 text-sm outline-none"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Frequency Penalty</span>
+              <input
+                type="number"
+                step="0.1"
+                min="-2"
+                max="2"
+                value={config.model?.frequency_penalty ?? ''}
+                onChange={e => updateNested('model', 'frequency_penalty', e.target.value === '' ? undefined : Number(e.target.value))}
+                placeholder="0.0"
+                className="w-full rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/70 dark:bg-gray-900/40 px-3 py-2 text-sm outline-none"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Presence Penalty</span>
+              <input
+                type="number"
+                step="0.1"
+                min="-2"
+                max="2"
+                value={config.model?.presence_penalty ?? ''}
+                onChange={e => updateNested('model', 'presence_penalty', e.target.value === '' ? undefined : Number(e.target.value))}
+                placeholder="0.0"
                 className="w-full rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/70 dark:bg-gray-900/40 px-3 py-2 text-sm outline-none"
               />
             </label>

@@ -215,6 +215,7 @@ const en: Translations = {
     refreshList: 'Refresh',
     newJob: 'New Job',
     createJob: 'Create Cron Job',
+    editJob: 'Edit Cron Job',
     jobName: 'Job Name',
     jobNamePlaceholder: 'e.g. Daily Report',
     cronExpr: 'Cron Expression',

@@ -6,7 +6,7 @@ import {
   Brain, MessageSquare, Globe, Terminal, Webhook,
   Users, Eye, EyeOff, Key, Plus, Trash2,
   Monitor, HardDrive, FileText, Archive, RotateCcw,
-  CheckCircle, AlertTriangle, Package, Box, Shield, Command, Search
+  CheckCircle, AlertTriangle, Package, Box, Shield, Command, Search, FolderOpen
 } from 'lucide-react';
 import InfoTooltip from '../components/InfoTooltip';
 import { useI18n } from '../i18n';
@@ -370,6 +370,9 @@ export default function SystemConfig() {
   const [workspacePath, setWorkspacePath] = useState('');
   const [workspacePathLoading, setWorkspacePathLoading] = useState(false);
   const [workspacePathSaving, setWorkspacePathSaving] = useState(false);
+  const [openClawDir, setOpenClawDir] = useState('');
+  const [openClawDirLoading, setOpenClawDirLoading] = useState(false);
+  const [openClawDirSaving, setOpenClawDirSaving] = useState(false);
   const [providerIdDrafts, setProviderIdDrafts] = useState<Record<string, string>>({});
 
   const providers = config?.models?.providers || {};
@@ -438,6 +441,26 @@ export default function SystemConfig() {
   };
 
   useEffect(() => { loadWorkspacePathFn(); }, []);
+
+  const loadOpenClawDirFn = async () => {
+    setOpenClawDirLoading(true);
+    try {
+      const r = await api.getOpenClawDir();
+      if (r.ok) setOpenClawDir(r.path || '');
+    } catch {} finally { setOpenClawDirLoading(false); }
+  };
+
+  const saveOpenClawDirFn = async () => {
+    setOpenClawDirSaving(true);
+    try {
+      const r = await api.setOpenClawDir(openClawDir);
+      if (r.ok) { setMsg(i18n.common.success); }
+      else { setMsg('保存失败'); }
+    } catch { setMsg('保存失败'); }
+    finally { setOpenClawDirSaving(false); setTimeout(() => setMsg(''), 3000); }
+  };
+
+  useEffect(() => { loadOpenClawDirFn(); }, []);
 
   const loadVersion = async () => {
     const [v, b] = await Promise.all([api.getSystemVersion(), api.getBackups()]);
@@ -1698,6 +1721,33 @@ export default function SystemConfig() {
               >
                 {workspacePathSaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
                 {workspacePathSaving ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+
+          <div className={`${modern ? 'page-modern-panel p-5' : 'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50 p-5'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-xl bg-purple-100/80 dark:bg-purple-900/20 text-purple-600 border border-purple-100/70 dark:border-purple-800/30">
+                <FolderOpen size={16} />
+              </div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">OpenClaw 配置目录</h3>
+              <InfoTooltip content="OpenClaw 的配置目录路径（openClawDir），包含 openclaw.json 配置文件。修改后需重启面板和网关生效。" />
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={openClawDir}
+                onChange={e => setOpenClawDir(e.target.value)}
+                placeholder="例如 ~/.openclaw 或 /opt/openclaw/config"
+                className="flex-1 px-3.5 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all font-mono"
+              />
+              <button
+                onClick={saveOpenClawDirFn}
+                disabled={openClawDirSaving || openClawDirLoading}
+                className={`${modern ? 'page-modern-action px-4 py-2 text-xs font-medium disabled:opacity-50' : 'flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 shadow-sm transition-all'}`}
+              >
+                {openClawDirSaving ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+                {openClawDirSaving ? '保存中...' : '保存'}
               </button>
             </div>
           </div>

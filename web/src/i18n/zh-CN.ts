@@ -215,6 +215,7 @@ const zhCN: Translations = {
     refreshList: '刷新列表',
     newJob: '新建任务',
     createJob: '新建定时任务',
+    editJob: '编辑定时任务',
     jobName: '任务名称',
     jobNamePlaceholder: '如: 每日早报',
     cronExpr: 'Cron 表达式',

@@ -442,6 +442,30 @@ func SetWorkspacePath(cfg *config.Config) gin.HandlerFunc {
 	}
 }
 
+func GetOpenClawDir(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(200, gin.H{"ok": true, "path": cfg.GetOpenClawDir()})
+	}
+}
+
+func SetOpenClawDir(cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var body struct {
+			Path string `json:"path"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(400, gin.H{"ok": false, "error": err.Error()})
+			return
+		}
+		if body.Path == "" {
+			c.JSON(400, gin.H{"ok": false, "error": "path required"})
+			return
+		}
+		cfg.SetOpenClawDir(body.Path)
+		c.JSON(200, gin.H{"ok": true})
+	}
+}
+
 // Unused imports suppressor
 var _ = io.EOF
 var _ = sort.Strings

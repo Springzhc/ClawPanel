@@ -187,6 +187,8 @@ const _api = {
   workspaceSetNote: (filePath: string, note: string) => put('/workspace/notes', { path: filePath, note }),
   getWorkspacePath: () => get('/workspace/path'),
   setWorkspacePath: (path: string) => put('/workspace/path', { path }),
+  getOpenClawDir: () => get('/openclaw/dir'),
+  setOpenClawDir: (path: string) => put('/openclaw/dir', { path }),
   // System
   getSystemEnv: () => get('/system/env'),
   getSystemVersion: () => get('/system/version'),

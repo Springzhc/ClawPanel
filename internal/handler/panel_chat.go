@@ -446,6 +446,11 @@ func rewritePanelChatRuntimeConfig(cfg *config.Config, srcConfigPath, dstConfigP
 	delete(obj, "plugins")
 	delete(obj, "model")
 	delete(obj, "sessionDir")
+	// Remove bindings that reference agents not in the runtime agent list.
+	// Panel chat uses a single isolated agent; cross-agent bindings cause
+	// "Unknown agent id" validation errors in OpenClaw 2026.6.x.
+	delete(obj, "bindings")
+	delete(agentsMap, "bindings")
 	encoded, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		return err

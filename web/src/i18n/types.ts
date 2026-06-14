@@ -229,6 +229,7 @@ export interface Translations {
     refreshList: string;
     newJob: string;
     createJob: string;
+    editJob: string;
     jobName: string;
     jobNamePlaceholder: string;
     cronExpr: string;
