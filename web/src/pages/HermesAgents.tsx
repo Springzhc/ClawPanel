@@ -1,9 +1,10 @@
 import { memo, useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Bot, Send, Eye, Clock, CheckCircle2, AlertTriangle, Loader2, Plus, ChevronDown, GripVertical } from 'lucide-react';
+import { useI18n } from '../i18n';
+import { Bot, Send, Eye, Clock, CheckCircle2, AlertTriangle, Loader2, Plus, ChevronDown, GripVertical, Users, RefreshCw, ShieldAlert } from 'lucide-react';
 import { api } from '../lib/api';
 
-interface AgentCollabProps {}
+interface HermesAgent {}
 
 type TabView = 'delegate' | 'kanban';
 
@@ -85,7 +86,7 @@ function PriorityBadge({ priority }: { priority: string }) {
   const colors: Record<string, string> = {
     low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
     medium: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-    high: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   };
   return (
     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${colors[priority] || colors.low}`}>
@@ -261,7 +262,8 @@ function KanbanPanel({ tasks, modern }: { tasks: KanbanTask[]; modern: boolean }
   );
 }
 
-function AgentCollabPage() {
+function HermesAgentsPage() {
+  const { locale } = useI18n();
   const { uiMode } = (useOutletContext() as { uiMode?: 'modern' }) || {};
   const modern = uiMode === 'modern';
   const [activeTab, setActiveTab] = useState<TabView>('delegate');
@@ -289,11 +291,15 @@ function AgentCollabPage() {
       <div className={`px-5 py-4 border-b shrink-0 ${modern ? 'border-slate-200/60 dark:border-slate-700/50 bg-white/30 dark:bg-slate-900/20 backdrop-blur-xl' : 'border-gray-100 dark:border-gray-800'}`}>
         <div className="flex items-center gap-3 mb-3">
           <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-100/80 dark:border-violet-800/40">
-            <Bot size={18} className="text-violet-600 dark:text-violet-400" />
+            <Users size={18} className="text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-gray-900 dark:text-white">智能体协作</h1>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">委派任务与管理工作流</p>
+            <h1 className="text-base font-bold text-gray-900 dark:text-white">
+              {locale === 'zh-CN' ? 'Hermes 智能体' : 'Hermes Agents'}
+            </h1>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              {locale === 'zh-CN' ? '监控 Delegate Task（同步子代理）和 Kanban（异步看板工作流）' : 'Monitor delegate tasks and async kanban workflows'}
+            </p>
           </div>
         </div>
 
@@ -328,4 +334,4 @@ function AgentCollabPage() {
   );
 }
 
-export default memo(AgentCollabPage);
+export default memo(HermesAgentsPage);

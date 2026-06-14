@@ -262,7 +262,7 @@ function LayoutShell({ onLogout, napcatStatus, wechatStatus, openclawStatus, pro
     { to: '/skills', icon: Sparkles, label: t.nav.skills },
     { to: '/plugins', icon: Puzzle, label: locale === 'zh-CN' ? '插件中心' : 'Plugins' },
     ...(enableAgents ? [{ to: '/agents', icon: Bot, label: locale === 'zh-CN' ? '智能体' : 'Agents' }] : []),
-    ...(enableAgents ? [{ to: '/agent-collab', icon: Users, label: locale === 'zh-CN' ? '智能体协作' : 'Agent Collab' }] : []),
+
     ...(enableAgents ? [{ to: '/monitor', icon: Network, label: locale === 'zh-CN' ? '编排监控' : 'Monitor' }] : []),
     { to: '/workflows', icon: GitBranch, label: locale === 'zh-CN' ? '工作流' : 'Workflows' },
     { to: '/company', icon: BriefcaseBusiness, label: locale === 'zh-CN' ? 'AI公司' : 'AI Company' },
@@ -278,6 +278,7 @@ function LayoutShell({ onLogout, napcatStatus, wechatStatus, openclawStatus, pro
     { to: '/hermes/health', icon: Bell, label: locale === 'zh-CN' ? '健康' : 'Health' },
     { to: '/hermes/platforms', icon: Radio, label: locale === 'zh-CN' ? '平台' : 'Platforms' },
     { to: '/hermes/logs', icon: ScrollText, label: locale === 'zh-CN' ? '日志' : 'Logs' },
+    { to: '/hermes/agents', icon: Users, label: locale === 'zh-CN' ? '智能体' : 'Agents' },
     { to: '/hermes/actions', icon: TerminalSquare, label: locale === 'zh-CN' ? '动作' : 'Actions' },
     { to: '/hermes/tasks', icon: Activity, label: locale === 'zh-CN' ? '任务' : 'Tasks' },
     { to: '/hermes/sessions', icon: MessageSquare, label: locale === 'zh-CN' ? '会话' : 'Sessions' },
@@ -300,6 +301,7 @@ function LayoutShell({ onLogout, napcatStatus, wechatStatus, openclawStatus, pro
     { to: '/hermes', icon: Brain, label: locale === 'zh-CN' ? '概览' : 'Overview' },
     { to: '/hermes/health', icon: Bell, label: locale === 'zh-CN' ? '健康' : 'Health' },
     { to: '/hermes/platforms', icon: Radio, label: locale === 'zh-CN' ? '平台' : 'Platforms' },
+    { to: '/hermes/agents', icon: Users, label: locale === 'zh-CN' ? '智能体' : 'Agents' },
     { to: '/hermes/tasks', icon: Activity, label: locale === 'zh-CN' ? '任务' : 'Tasks' },
   ], [locale]);
 
